@@ -11,6 +11,10 @@ dataset:
   source_id: [0, 1]
   train_novel_id: [2, 3, 4]
   val_novel_id: [3]
+<<<<<<< HEAD
+=======
+  src_res: 1024
+>>>>>>> 169cf8a199586e2261f6013f7bec17a272d19060
   use_hr_img: True
   use_processed_data: True
   data_root: 'PATH/TO/RENDER_DATA'

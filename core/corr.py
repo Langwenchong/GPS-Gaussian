@@ -37,7 +37,10 @@ class CorrBlockFast1D:
         corr = CorrBlockFast1D.corr(fmap1, fmap2)
         batch, h1, w1, dim, w2 = corr.shape
         corr = corr.reshape(batch*h1*w1, dim, 1, w2)
+<<<<<<< HEAD
         # 注意这里的平均池化是在w2上做平均，其实就是在降采样cost volume的深度维度
+=======
+>>>>>>> 169cf8a199586e2261f6013f7bec17a272d19060
         for i in range(self.num_levels):
             self.corr_pyramid.append(corr.view(batch, h1, w1, -1, w2//2**i))
             corr = F.avg_pool2d(corr, [1,2], stride=[1,2])
@@ -53,6 +56,7 @@ class CorrBlockFast1D:
 
     @staticmethod
     def corr(fmap1, fmap2):
+<<<<<<< HEAD
         # 这里貌似就是计算cost volume，注意爱因斯坦求和是取每一个视图(u,v)的d个预设平面的特征和另一个视图相同(u,v' v'∈W)的d特征求内积再累加
         # 之所以无需像pixelsplat,mvsplat那样采样，是因为事先立体矫正了，因此保证都在同一个基线上
         B, D, H, W1 = fmap1.shape
@@ -63,6 +67,14 @@ class CorrBlockFast1D:
         corr = torch.einsum('aijk,aijh->ajkh', fmap1, fmap2)
         corr = corr.reshape(B, H, W1, 1, W2).contiguous()
         # 这里是取平均，注意这里可不是在对cost volume的深度维度的代价做平均，而只是对特征的代价计算一个特征维度的平均量化
+=======
+        B, D, H, W1 = fmap1.shape
+        _, _, _, W2 = fmap2.shape
+        fmap1 = fmap1.view(B, D, H, W1)
+        fmap2 = fmap2.view(B, D, H, W2)
+        corr = torch.einsum('aijk,aijh->ajkh', fmap1, fmap2)
+        corr = corr.reshape(B, H, W1, 1, W2).contiguous()
+>>>>>>> 169cf8a199586e2261f6013f7bec17a272d19060
         return corr / torch.sqrt(torch.tensor(D).float())
 
 
