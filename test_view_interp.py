@@ -7,10 +7,7 @@ import cv2
 import os
 from pathlib import Path
 from tqdm import tqdm
-<<<<<<< HEAD
 from plyfile import PlyData, PlyElement
-=======
->>>>>>> 169cf8a199586e2261f6013f7bec17a272d19060
 
 from lib.human_loader import StereoHumanDataset
 from lib.network import RtStereoHumanModel
@@ -36,11 +33,8 @@ class StereoHumanRender:
         self.model.eval()
 
     def infer_static(self, view_select, novel_view_nums):
-<<<<<<< HEAD
         gaussian_clouds_path = os.path.join(self.cfg.test_out_path,"gaussian_clouds")
         os.makedirs(gaussian_clouds_path,exist_ok=True)
-=======
->>>>>>> 169cf8a199586e2261f6013f7bec17a272d19060
         total_samples = len(os.listdir(os.path.join(self.cfg.dataset.test_data_root, 'img')))
         for idx in tqdm(range(total_samples)):
             item = self.dataset.get_test_item(idx, source_id=view_select)
@@ -50,19 +44,12 @@ class StereoHumanRender:
                 data_i = get_novel_calib(data, self.cfg.dataset, ratio=ratio_tmp, intr_key='intr_ori', extr_key='extr_ori')
                 with torch.no_grad():
                     data_i, _, _ = self.model(data_i, is_train=False)
-<<<<<<< HEAD
                     data_i,gaussian_clouds = pts2render(data_i, bg_color=self.cfg.dataset.bg_color,export=self.cfg.export_ply)
 
                 render_novel = self.tensor2np(data['novel_view']['img_pred'])
                 cv2.imwrite(self.cfg.test_out_path + '/%s_novel%s.jpg' % (data_i['name'], str(i).zfill(2)), render_novel)
                 if self.cfg.export_ply:
                     PlyData([PlyElement.describe(gaussian_clouds[0], "vertex")]).write(gaussian_clouds_path+'/%s_gaussians%s.ply' % (data['name'],str(i).zfill(2)))
-=======
-                    data_i = pts2render(data_i, bg_color=self.cfg.dataset.bg_color)
-
-                render_novel = self.tensor2np(data['novel_view']['img_pred'])
-                cv2.imwrite(self.cfg.test_out_path + '/%s_novel%s.jpg' % (data_i['name'], str(i).zfill(2)), render_novel)
->>>>>>> 169cf8a199586e2261f6013f7bec17a272d19060
 
     def tensor2np(self, img_tensor):
         img_np = img_tensor.permute(0, 2, 3, 1)[0].detach().cpu().numpy()
@@ -91,10 +78,7 @@ if __name__ == '__main__':
     parser.add_argument('--test_data_root', type=str, required=True)
     parser.add_argument('--ckpt_path', type=str, required=True)
     parser.add_argument('--novel_view_nums', type=int, default=5)
-<<<<<<< HEAD
     parser.add_argument("--export_ply", type=bool, default=False)
-=======
->>>>>>> 169cf8a199586e2261f6013f7bec17a272d19060
     arg = parser.parse_args()
 
     cfg = config()
@@ -104,10 +88,7 @@ if __name__ == '__main__':
 
     cfg.defrost()
     cfg.batch_size = 1
-<<<<<<< HEAD
     cfg.export_ply = arg.export_ply
-=======
->>>>>>> 169cf8a199586e2261f6013f7bec17a272d19060
     cfg.dataset.test_data_root = arg.test_data_root
     cfg.dataset.use_processed_data = False
     cfg.restore_ckpt = arg.ckpt_path
