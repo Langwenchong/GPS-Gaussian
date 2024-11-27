@@ -1,0 +1,54 @@
+{
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Train Stage1 (Debug)",
+            "type": "debugpy",
+            "request": "launch",
+            "module": "train_stage1",
+            "console": "integratedTerminal",
+            "justMyCode": true,
+            "env": {
+                "CUDA_VISIBLE_DEVICES": "7",
+            }
+        },
+        {
+            "name": "Test View Interp (Debug)",
+            "type": "debugpy",
+            "request": "launch",
+            "module": "test_view_interp",
+            "console": "integratedTerminal",
+            "justMyCode": true,
+            "args": [
+                "--test_data_root","datasets/render_data/val",
+                "--ckpt_path","checkpoints/GPS-GS_stage2_final.pth",
+                "--novel_view_nums","5",
+                "--export_ply","True"
+            ],
+            "env": {
+                "CUDA_VISIBLE_DEVICES": "7",
+            }
+        },
+        {
+            "name": "Test Real Data (Debug)",
+            "type": "debugpy",
+            "request": "launch",
+            "module": "test_real_data",
+            "console": "integratedTerminal",
+            "justMyCode": true,
+            "args": [
+                "--test_data_root","datasets/real_data",
+                "--ckpt_path","checkpoints/GPS-GS_stage2_final.pth",
+                "--src_view","0","1",
+                "--ratio=0.5",
+                "--export_ply","True"
+            ],
+            "env": {
+                "CUDA_VISIBLE_DEVICES": "7",
+            }
+        },
+    ]
+}

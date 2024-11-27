@@ -1,0 +1,11 @@
+__pycache__
+_torchshow
+*.pyc
+/experiments
+/test_out
+/interp_out
+/datasets
+/checkpoints
+/RAFT-Stereo
+/gaussian-splatting
+*.mp4
