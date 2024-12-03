@@ -12,7 +12,7 @@
             "console": "integratedTerminal",
             "justMyCode": true,
             "env": {
-                "CUDA_VISIBLE_DEVICES": "7",
+                "CUDA_VISIBLE_DEVICES": "7",        
             }
         },
         {
@@ -23,7 +23,7 @@
             "console": "integratedTerminal",
             "justMyCode": true,
             "args": [
-                "--test_data_root","datasets/render_data/val",
+                "--test_data_root","data/render_data/val",
                 "--ckpt_path","checkpoints/GPS-GS_stage2_final.pth",
                 "--novel_view_nums","5",
                 "--export_ply","True"
@@ -40,14 +40,14 @@
             "console": "integratedTerminal",
             "justMyCode": true,
             "args": [
-                "--test_data_root","datasets/real_data",
+                "--test_data_root","data/real_data",
                 "--ckpt_path","checkpoints/GPS-GS_stage2_final.pth",
                 "--src_view","0","1",
-                "--ratio=0.5",
+                "--ratio=0.3",
                 "--export_ply","True"
             ],
             "env": {
-                "CUDA_VISIBLE_DEVICES": "7",
+                "CUDA_VISIBLE_DEVICES": "3",
             }
         },
     ]
