@@ -9,7 +9,7 @@ num_steps: 40000
 dataset:
   source_id: [0, 1]
   use_processed_data: True
-  data_root: 'datasets/render_data'
+  data_root: '/nas_ssd/lwc/datasets/gpsgaussian/render_data/'
 
 raft:
   mixed_precision: False

@@ -180,9 +180,9 @@ if __name__ == '__main__':
 
     for path in [cfg.record.ckpt_path, cfg.record.show_path, cfg.record.logs_path, cfg.record.file_path]:
         Path(path).mkdir(exist_ok=True, parents=True)
-
+    # 备份文件
     file_backup(cfg.record.file_path, cfg, train_script=os.path.basename(__file__))
-
+        
     torch.manual_seed(1314)
     np.random.seed(1314)
 

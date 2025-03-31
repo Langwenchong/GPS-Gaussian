@@ -68,15 +68,16 @@ def stereo_pts2flow(pts0, pts1, rectify0, rectify1, Tf_x):
     new_depth1 = pts2depth(torch.FloatTensor(pts1), torch.FloatTensor(new_extr1), torch.FloatTensor(new_intr1))
     new_depth0 = new_depth0.detach().numpy()
     new_depth1 = new_depth1.detach().numpy()
+    # 上面已经计算出来inverse_depth了之所以还要进行立体矫正视为了将深度转换为焦距归一化后的立体矫正视图这也是为什么后面视差与逆深度转换时没有涉及到乘上焦距的原因默认就是1了
     new_depth0 = cv2.remap(new_depth0, rectify_mat0_x, rectify_mat0_y, cv2.INTER_LINEAR)
     new_depth1 = cv2.remap(new_depth1, rectify_mat1_x, rectify_mat1_y, cv2.INTER_LINEAR)
 
-    offset0 = new_intr1[0, 2] - new_intr0[0, 2]
-    disparity0 = -new_depth0 * Tf_x
+    offset0 = new_intr1[0, 2] - new_intr0[0, 2] #主点偏移量，只会发生在x轴
+    disparity0 = -new_depth0 * Tf_x #实际上是new_depth * (-Tf_x)
     flow0 = offset0 - disparity0
 
-    offset1 = new_intr0[0, 2] - new_intr1[0, 2]
-    disparity1 = -new_depth1 * (-Tf_x)
+    offset1 = new_intr0[0, 2] - new_intr1[0, 2] #注意此时右视图视为main视图
+    disparity1 = -new_depth1 * (-Tf_x) #这个时候计算的是xr-xl的视差因此要再乘个负号
     flow1 = offset1 - disparity1
 
     flow0[new_depth0 < 0.05] = 0
@@ -113,7 +114,7 @@ class StereoHumanDataset(Dataset):
         self.intr_path = os.path.join(self.data_root, 'parm/%s/%d_intrinsic.npy')
         self.extr_path = os.path.join(self.data_root, 'parm/%s/%d_extrinsic.npy')
         self.sample_list = sorted(list(os.listdir(os.path.join(self.data_root, 'img'))))
-
+        # 是否使用立体校正的数据
         if self.use_processed_data:
             self.local_data_root = os.path.join(opt.data_root, 'rectified_local', self.phase)
             self.local_img_path = os.path.join(self.local_data_root, 'img/%s/%d.jpg')
@@ -121,7 +122,7 @@ class StereoHumanDataset(Dataset):
             self.local_flow_path = os.path.join(self.local_data_root, 'flow/%s/%d.npy')
             self.local_valid_path = os.path.join(self.local_data_root, 'valid/%s/%d.png')
             self.local_parm_path = os.path.join(self.local_data_root, 'parm/%s/%d_%d.json')
-
+            # 如果数据已经处理完成了则直接加载否则需要先对数据进行立体校正
             if os.path.exists(self.local_data_root):
                 assert len(os.listdir(os.path.join(self.local_data_root, 'img'))) == len(self.sample_list)
                 logging.info(f"Using local data in {self.local_data_root} ...")
@@ -157,8 +158,8 @@ class StereoHumanDataset(Dataset):
             np.save(flow0_save_name, lmain_stereo_np['flow0'].astype(np.float16))
             Image.fromarray(lmain_stereo_np['valid0']).save(valid0_save_name)
             np.save(flow1_save_name, lmain_stereo_np['flow1'].astype(np.float16))
-            Image.fromarray(lmain_stereo_np['valid1']).save(valid1_save_name)
-            save_np_to_json(lmain_stereo_np['camera'], parm_save_name)
+            Image.fromarray(lmain_stereo_np['valid1']).save(valid1_save_name) #注意mask与valid的区别，mask是原始掩码(这里是三通道且并不是二值的），valid是根据mask进一步结合flow等生成的更加精确的有效区域
+            save_np_to_json(lmain_stereo_np['camera'], parm_save_name) #存储了矫正前后参数以及主点偏移
 
         logging.info("Generating data Done!")
 
@@ -258,25 +259,26 @@ class StereoHumanDataset(Dataset):
         E = E1 @ E0
         R, T = E[:3, :3], E[:3, 3]
         dist0, dist1 = np.zeros(4), np.zeros(4)
-        # 接受的是两个相机的内参与内参矫正稀疏，以及图片尺寸和相机1变换到相机2的相对变换旋转与平移矩阵
-        # 这里的校准是保证两个相机处在同一个水平面，只会有x上的不同，立体校正，其中R0,R1是矫正变换矩阵，P0P1是矫正后内参，注意此时矫正后两个相机主点位置不同，需要计算一个主点偏移量
+        # 接受的是两个相机的内参与内参矫正系数，以及图片尺寸和相机1变换到相机2的相对变换旋转与平移矩阵
+        # 这里的校准是保证两个相机处在同一个水平面，只会有x上的不同，立体校正，其中R0,R1是矫正变换矩阵，P0P1是矫正后内参
+        # 注意此时矫正后两个相机主点位置不同(可能不位于图像正中间)，需要计算一个主点偏移量
         R0, R1, P0, P1, _, _, _ = cv2.stereoRectify(intr0, dist0, intr1, dist1, (W, H), R, T, flags=0)
-
+        # 为了把两个相机矫正为同一个水平面显然内外参矩阵都要进行变换
         new_extr0 = R0 @ extr0
         new_intr0 = P0[:3, :3]
         new_extr1 = R1 @ extr1
         new_intr1 = P1[:3, :3]
-        Tf_x = np.array(P1[0, 3])
+        Tf_x = np.array(P1[0, 3]) #个人理解是移动ref相机到main相机平面，因此平移是取P1的x平移量，注意是基线不是主点偏移
 
         camera = {
             'intr0': new_intr0,
             'intr1': new_intr1,
             'extr0': new_extr0,
             'extr1': new_extr1,
-            # 投影立体校正后处于同一个极线平面的两个相机主点的偏移量
+            # 投影立体校正后处于同一个极线平面的两个相机的基线平移，注意不是距离是将ref移到main的平移，一般认为ref是在右边因此向左平移是负值
             'Tf_x': Tf_x
         }
-
+        # 前面只是完成了相机参数矫正变换，这里是结合上面的参数真正对图片进行重新立体校正后的重映射采样，这里的rectify_mat就是(H,W)表示原始图片的某个像素P对应立体校正后的图像中的像素P’
         rectify_mat0_x, rectify_mat0_y = cv2.initUndistortRectifyMap(intr0, dist0, R0, P0, (W, H), cv2.CV_32FC1)
         new_img0 = cv2.remap(img0, rectify_mat0_x, rectify_mat0_y, cv2.INTER_LINEAR)
         new_mask0 = cv2.remap(mask0, rectify_mat0_x, rectify_mat0_y, cv2.INTER_LINEAR)
@@ -293,11 +295,11 @@ class StereoHumanDataset(Dataset):
             'mask1': new_mask1,
             'camera': camera
         }
-
+        # 如果有三维点云则重新计算三维点云在立体校正后的图片中的位置
         if pts0 is not None:
-            # 根据原始RGB与深度图，相机内外惨等反投影的世界坐标系的点重新投影到校正后的图像中并计算此时立体校正后的GT Flow
+            # 根据原始RGB与深度图，相机内外参数等反投影的世界坐标系的点重新投影到校正后的图像中并计算此时立体校正后的GT Flow即同一个表面三维点在左右视图的像素差注意是main-ref
             flow0, flow1 = stereo_pts2flow(pts0, pts1, rectify0, rectify1, Tf_x)
-
+            # 根据新的flow强度重新计算有效区域，这里是为了保证flow的有效性，因为立体校正后的图像可能会有一些区域是无效的
             kernel = np.ones((3, 3), dtype=np.uint8)
             flow_eroded, valid_eroded = [], []
             for (flow, new_mask) in [(flow0, new_mask0), (flow1, new_mask1)]:
