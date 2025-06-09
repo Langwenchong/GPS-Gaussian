@@ -120,7 +120,8 @@ class MultiBasicEncoder(nn.Module):
         feat1, feat2 = self.conv2(x).split(dim=0, split_size=x.shape[0]//2)
         
         outputs08 = [f(x) for f in self.outputs08]
-        # 这里同时返还再次编码后的数据(注意列表长度与中间隐层变量的个数相关)与没有再次编码之前的两个feat
+        # 这里是根据image encoder提取的图像特征后分别进一步进行简单的卷积得到
+        # 用于双视角各自的用于立体匹配的context encoder的输出与feature encoder的输出
         return outputs08, feat1, feat2
 
 

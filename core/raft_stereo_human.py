@@ -36,9 +36,10 @@ class RAFTStereoHuman(nn.Module):
             fmap12 = torch.cat((fmap1, fmap2), dim=0)
             fmap21 = torch.cat((fmap2, fmap1), dim=0)
 
+            # 这里是使用context feature进一步处理分别生成用于初始化GRU模块的隐藏状态(对应代码中的net_list)，一部分作为上下文信息特征(对应代码中的inp_list) 
             net_list = [torch.tanh(x[0]) for x in cnet_list]
             inp_list = [torch.relu(x[1]) for x in cnet_list]
-            # 注意context_zqr_convs将通道扩展为了三倍，并且这里对inp_list处理后按照通道数三等分直接用于RaftStereo的context的多次编码
+            # 注意context_zqr_convs将通道扩展为了三倍，并且这里对inp_list处理后按照通道数三等分直接用于RaftStereo的context的多次编码，减少重复计算
             # Rather than running the GRU's conv layers on the context features multiple times, we do it once at the beginning
             inp_list = [list(conv(i).split(split_size=conv.out_channels // 3, dim=1)) for i, conv in zip(inp_list, self.context_zqr_convs)]
 
@@ -101,10 +102,12 @@ class FlowUpdateModule(nn.Module):
             corr = corr_fn(coords1)  # index correlation volume
             flow = coords1 - coords0
             with autocast(enabled=self.args.mixed_precision):
+                # 这里如果层数多于1个，且启用slow_fast则先更新粗分辨率gru的隐藏状态但是不更新光流，因此此次更新不传播误差只是更新隐藏状态
                 if self.args.n_gru_layers == 3 and self.args.slow_fast_gru:  # Update low-res GRU
                     net_list = self.update_block(net_list, inp_list, iter32=True, iter16=False, iter08=False, update=False)
                 if self.args.n_gru_layers >= 2 and self.args.slow_fast_gru:  # Update low-res GRU and mid-res GRU
                     net_list = self.update_block(net_list, inp_list, iter32=self.args.n_gru_layers==3, iter16=True, iter08=False, update=False)
+                # 这里才是真正生成残差光流的
                 net_list, up_mask, delta_flow = self.update_block(net_list, inp_list, corr, flow, iter32=self.args.n_gru_layers==3, iter16=self.args.n_gru_layers>=2)
             # 由于立体矫正了，因此偏差只可能是在x极线轴上，不会发生纵向偏移
             # in stereo mode, project flow onto epipolar

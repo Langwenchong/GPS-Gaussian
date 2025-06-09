@@ -40,7 +40,7 @@
             "console": "integratedTerminal",
             "justMyCode": true,
             "args": [
-                "--test_data_root","data/real_data",
+                "--test_data_root","/data/lwc/Datasets/gpsgaussian/real_data/",
                 "--ckpt_path","checkpoints/GPS-GS_stage2_final.pth",
                 "--src_view","0","1",
                 "--ratio=0.3",
